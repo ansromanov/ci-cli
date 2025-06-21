@@ -1,0 +1,50 @@
+version: '3'
+
+tasks:
+  help:
+    desc: Show common operations
+    cmds:
+      - |
+        echo "Common operations:"
+        echo "  task test    - Run tests using uv"
+        echo "  task build   - Build the project (wheel/sdist)"
+        echo "  task sync    - Sync dependencies from pyproject.toml/uv.lock"
+        echo "  task lock    - Regenerate uv.lock from pyproject.toml"
+        echo "  task fmt     - Format code using ruff"
+        echo "  task lint    - Lint code using ruff"
+        echo "  task rebase  - Rebase from origin/main"
+
+  test:
+    desc: Run tests using uv
+    cmds:
+      - uv run pytest tests
+
+  build:
+    desc: Build the project (wheel/sdist)
+    cmds:
+      - uv build
+
+  sync:
+    desc: Sync dependencies from pyproject.toml/uv.lock
+    cmds:
+      - uv sync --all-packages --all-groups
+
+  lock:
+    desc: Regenerate uv.lock from pyproject.toml
+    cmds:
+      - uv lock
+
+  fmt:
+    desc: Format code using uv
+    cmds:
+      - uv run ruff format --check --diff app tests
+
+  lint:
+    desc: Format code using uv
+    cmds:
+      - uv run ruff format --check --diff app tests
+
+  rebase:
+    desc: Rebase from origin/main
+    cmds:
+      - git rebase origin/main
