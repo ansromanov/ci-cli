@@ -1,0 +1,179 @@
+# Cursor Rules: `ci-cli`
+
+You are an expert in Python CLI development and modern tooling. This project is `ci-cli`, a Typer-based CLI app for managing CI/CD pipelines across GitHub Actions, GitLab, CircleCI, and other providers.
+
+---
+
+## 🔧 Architecture Principles
+
+- Use **Typer** for CLI command definition.
+- Structure commands by **provider** (GitHub, GitLab, etc.).
+- Write **pure, testable, functional code**—avoid classes unless needed for shared state or interface abstraction.
+- Prefer **modularization** over duplication.
+- Use the **Receive an Object, Return an Object (RORO)** pattern for better clarity and future-proofing.
+
+---
+
+## 🧱 File and Directory Structure
+
+- Use snake_case for all files and directories.
+- Example structure:
+  ```
+  ci-cli/
+  ├── app/
+  │   ├── __init__.py
+  │   ├── cli.py
+  │   ├── commands/
+  │   │   ├── github.py
+  │   │   ├── gitlab.py
+  │   │   └── circleci.py
+  │   ├── core/
+  │   │   ├── config.py
+  │   │   └── client.py
+  │   └── utils/
+  │       └── output.py
+  ├── tests/
+  ├── pyproject.toml
+  ├── uv.lock
+  ├── Taskfile.yml
+  └── .python-version
+  ```
+
+- Group related commands using Typer sub-apps.
+- Delegate business logic to `app/core/` and formatting to `app/utils/`.
+
+---
+
+## 🧪 Coding Guidelines
+
+- Use `def` with type hints.
+- Use `@app.command()` and `@typer.option()` with help texts.
+- Minimize logic in CLI commands—call external helpers/services.
+- Return early for errors. Avoid nesting.
+- Format using `ruff`, lint with `ruff`, type-check with `mypy`.
+
+Example ✅:
+```python
+@app.command()
+def status(provider: str = "github"):
+    result = fetch_status(provider)
+    print_status(result)
+```
+
+Avoid ❌:
+```python
+@app.command()
+def status():
+    if os.getenv("PROVIDER") == "github":
+        # inline logic
+```
+
+---
+
+## ⚙️ Dev Tooling
+
+- Use:
+  - `ruff` for linting and formatting
+  - `mypy` for type checking
+  - `pytest` for testing
+  - `uv` for dependency management
+  - `Taskfile.yml` for automation
+
+---
+
+## 📦 Package Management with `uv`
+
+This project **exclusively uses [`uv`](https://github.com/astral-sh/uv)** for dependency and virtual environment management.
+
+**✅ Always use `uv`**  
+- Do **not** use `pip`, `poetry`, `pip-tools`, or other tools directly.
+
+**🔁 Dependency Commands**
+
+```bash
+# Add or upgrade dependencies
+uv add typer rich ruff mypy
+
+# Remove dependencies
+uv remove typer
+
+# Sync environment from lock file
+uv sync
+```
+
+**▶️ Run scripts with dependencies**
+
+```bash
+uv run script.py
+```
+
+**📝 Inline metadata (optional)**
+
+```python
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#     "typer",
+#     "rich",
+#     "requests",
+# ]
+# ///
+```
+
+Or use:
+
+```bash
+# Manage per-script dependencies
+uv add requests --script script.py
+uv remove requests --script script.py
+uv sync --script script.py
+```
+
+---
+
+## 🚀 Task Automation
+
+This project uses **Taskfile.yml** for common development tasks:
+
+```bash
+# Run tests
+task test
+
+# Build the project
+task build
+
+# Sync dependencies
+task sync
+
+# Format and lint code
+task fmt
+task lint
+
+# Regenerate lock file
+task lock
+```
+
+---
+
+## 🔁 Future Rewrite Readiness
+
+- Avoid Python-specific hacks or heavy reflection.
+- Design core logic to be **language-portable** (interfaces, pure functions, config files).
+- Plan for rewriting in **Go or Rust** by isolating CLI/UI, business logic, and API layers.
+
+---
+
+## ☑️ Summary Checklist
+
+- [ ] All dependencies managed with `uv`
+- [ ] Commands grouped under `app/commands/` using Typer sub-apps
+- [ ] Core logic under `app/core/`, formatting under `app/utils/`
+- [ ] No business logic inside CLI command functions
+- [ ] Clean error handling with `typer.Exit` and `rich` output
+- [ ] Proper test coverage using `pytest`
+- [ ] Formatting and linting via `ruff`
+- [ ] Use `task` commands for automation
+
+---
+
+Cursor will implement code that follows these rules.
