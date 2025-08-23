@@ -7,20 +7,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const (
-	// GitHub
-	GitHubTokenEnvVar = "GITHUB_TOKEN"
-	GitHubURLEnvVar   = "GITHUB_URL"
-	// GitLab
-	GitLabTokenEnvVar = "GITLAB_TOKEN"
-	GitLabURLEnvVar   = "GITLAB_URL"
-	// CircleCI
-	CircleCIURLEnvVar = "CIRCLECI_URL"
-	// Bitbucket
-	BitbucketURLEnvVar   = "BITBUCKET_URL"
-	BitbucketTokenEnvVar = "BITBUCKET_TOKEN"
-)
-
 // Config represents the main configuration structure
 type Config struct {
 	Providers ProvidersConfig `yaml:"providers"`
@@ -35,60 +21,10 @@ type ProvidersConfig struct {
 	Bitbucket BitbucketConfig `yaml:"bitbucket"`
 }
 
-// GitLabConfig contains GitLab-specific configuration
-type GitLabConfig struct {
-	URL   string `yaml:"url"`
-	Token string `yaml:"token"`
-}
-
-// GitHubConfig contains GitHub-specific configuration
-type GitHubConfig struct {
-	Token string `yaml:"token"`
-}
-
-// CircleCIConfig contains CircleCI-specific configuration
-type CircleCIConfig struct {
-	Token string `yaml:"token"`
-}
-
-// BitbucketConfig contains Bitbucket-specific configuration
-type BitbucketConfig struct {
-	URL   string `yaml:"url"`
-	Token string `yaml:"token"`
-}
-
 // GlobalConfig contains global configuration options
 type GlobalConfig struct {
 	DefaultProvider string `yaml:"default_provider"`
 	OutputFormat    string `yaml:"output_format"`
-}
-
-func (c *Config) ValidateGitHubConfig() error {
-	if c.Providers.GitHub.Token == "" {
-		return fmt.Errorf("GitHub token is required. Please set the %s environment variable.", GitHubTokenEnvVar)
-	}
-	return nil
-}
-
-func (c *Config) ValidateGitLabConfig() error {
-	if c.Providers.GitLab.Token == "" {
-		return fmt.Errorf("GitLab token is required. Please set the %s environment variable.", GitLabTokenEnvVar)
-	}
-	return nil
-}
-
-func (c *Config) ValidateCircleCIConfig() error {
-	if c.Providers.CircleCI.Token == "" {
-		return fmt.Errorf("CircleCI token is required. Please set the %s environment variable.", CircleCIURLEnvVar)
-	}
-	return nil
-}
-
-func (c *Config) ValidateBitbucketConfig() error {
-	if c.Providers.Bitbucket.Token == "" {
-		return fmt.Errorf("Bitbucket token is required. Please set the %s environment variable.", BitbucketTokenEnvVar)
-	}
-	return nil
 }
 
 // getEnvWithDefault returns the value of the environment variable with the given key, or the default value if the environment variable is not set
@@ -100,13 +36,14 @@ func getEnvWithDefault(key, defaultValue string) string {
 	return value
 }
 
-// LoadFromEnv loads configuration from environment variables
+// LoadFromEnv loads configuration from envirment variables
 func LoadFromEnv() *Config {
 	config := &Config{
 		Providers: ProvidersConfig{
-			GitHub: GitHubConfig{
-				Token: os.Getenv(GitHubTokenEnvVar),
-			},
+			GitHub:    LoadGitHubFromEnv(),
+			GitLab:    LoadGitLabFromEnv(),
+			CircleCI:  LoadCircleCIFromEnv(),
+			Bitbucket: LoadBitbucketFromEnv(),
 		},
 		Global: GlobalConfig{
 			OutputFormat: getEnvWithDefault("CI_CLI_OUTPUT_FORMAT", "table"),
@@ -114,6 +51,34 @@ func LoadFromEnv() *Config {
 	}
 
 	return config
+}
+
+func LoadConfig(configPath string) (*Config, error) {
+	config := LoadFromEnv()
+
+	// If config file exists, merge with environment variables
+	if configPath != "" {
+		fileConfig, err := Load(configPath)
+		if err != nil {
+			// Log warning but don't fail if file doesn't exist
+			fmt.Printf("Warning: Could not load config file: %v\n", err)
+		} else {
+			// Merge configurations (env vars take precedence)
+			config = mergeConfigs(fileConfig, config)
+		}
+	}
+
+	return config, nil
+}
+
+func mergeConfigs(fileConfig, envConfig *Config) *Config {
+	// Merge all provider configurations (env vars take precedence)
+	envConfig.Providers.GitHub = MergeGitHubConfig(fileConfig.Providers.GitHub, envConfig.Providers.GitHub)
+	envConfig.Providers.GitLab = MergeGitLabConfig(fileConfig.Providers.GitLab, envConfig.Providers.GitLab)
+	envConfig.Providers.CircleCI = MergeCircleCIConfig(fileConfig.Providers.CircleCI, envConfig.Providers.CircleCI)
+	envConfig.Providers.Bitbucket = MergeBitbucketConfig(fileConfig.Providers.Bitbucket, envConfig.Providers.Bitbucket)
+
+	return envConfig
 }
 
 // Load loads configuration from a file

@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/go-github/v74/github"
 	"golang.org/x/oauth2"
 )
@@ -12,7 +13,7 @@ type Client struct {
 	token  string
 }
 
-// NewClient creates a new GitHub client
+// NewClient creates a new GitHub client with token authentication
 func NewClient(token string) *Client {
 	if token == "" {
 		return nil
@@ -46,10 +47,25 @@ func (c *Client) ValidateToken(ctx context.Context) error {
 	return nil
 }
 
+// GetAuthenticatedUser returns the authenticated user information
 func (c *Client) GetAuthenticatedUser(ctx context.Context) (*github.User, error) {
 	user, _, err := c.client.Users.Get(ctx, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get authenticated user: %w", err)
 	}
 	return user, nil
+}
+
+// Add comprehensive error handling
+type GitHubError struct {
+	Message string
+	Status  int
+	Err     error
+}
+
+func (e *GitHubError) Error() string {
+	if e.Err != nil {
+		return fmt.Sprintf("GitHub API error (%d): %s - %v", e.Status, e.Message, e.Err)
+	}
+	return fmt.Sprintf("GitHub API error (%d): %s", e.Status, e.Message)
 }
