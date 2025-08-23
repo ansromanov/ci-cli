@@ -1,4 +1,4 @@
-module ci-cli
+module ci
 
 go 1.23.0
 

@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"ci-cli/internal/config"
-	"ci-cli/internal/providers/github"
+	"ci/internal/config"
+	"ci/internal/providers/github"
 	"context"
 	"fmt"
 	"time"

@@ -11,9 +11,9 @@ import (
 var (
 	cfgFile string
 	rootCmd = &cobra.Command{
-		Use:   "ci-cli",
+		Use:   "ci",
 		Short: "A CLI tool for managing CI/CD pipelines",
-		Long: `ci-cli is a command line tool that provides a unified interface
+		Long: `ci is a command line tool that provides a unified interface
 for managing CI/CD pipelines across different providers like GitLab, GitHub Actions, and CircleCI.`,
 	}
 )

@@ -67,4 +67,4 @@ config.local.yml
 config.local.json
 
 # Binary output
-ci-cli
+ci

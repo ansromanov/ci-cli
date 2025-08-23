@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"ci-cli/cmd"
+	"ci/cmd"
 )
 
 func main() {
