@@ -7,6 +7,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	// GitHub
+	GitHubTokenEnvVar = "GITHUB_TOKEN"
+	GitHubURLEnvVar   = "GITHUB_URL"
+	// GitLab
+	GitLabTokenEnvVar = "GITLAB_TOKEN"
+	GitLabURLEnvVar   = "GITLAB_URL"
+	// CircleCI
+	CircleCIURLEnvVar = "CIRCLECI_URL"
+	// Bitbucket
+	BitbucketURLEnvVar   = "BITBUCKET_URL"
+	BitbucketTokenEnvVar = "BITBUCKET_TOKEN"
+)
+
 // Config represents the main configuration structure
 type Config struct {
 	Providers ProvidersConfig `yaml:"providers"`
@@ -47,6 +61,59 @@ type BitbucketConfig struct {
 type GlobalConfig struct {
 	DefaultProvider string `yaml:"default_provider"`
 	OutputFormat    string `yaml:"output_format"`
+}
+
+func (c *Config) ValidateGitHubConfig() error {
+	if c.Providers.GitHub.Token == "" {
+		return fmt.Errorf("GitHub token is required. Please set the %s environment variable.", GitHubTokenEnvVar)
+	}
+	return nil
+}
+
+func (c *Config) ValidateGitLabConfig() error {
+	if c.Providers.GitLab.Token == "" {
+		return fmt.Errorf("GitLab token is required. Please set the %s environment variable.", GitLabTokenEnvVar)
+	}
+	return nil
+}
+
+func (c *Config) ValidateCircleCIConfig() error {
+	if c.Providers.CircleCI.Token == "" {
+		return fmt.Errorf("CircleCI token is required. Please set the %s environment variable.", CircleCIURLEnvVar)
+	}
+	return nil
+}
+
+func (c *Config) ValidateBitbucketConfig() error {
+	if c.Providers.Bitbucket.Token == "" {
+		return fmt.Errorf("Bitbucket token is required. Please set the %s environment variable.", BitbucketTokenEnvVar)
+	}
+	return nil
+}
+
+// getEnvWithDefault returns the value of the environment variable with the given key, or the default value if the environment variable is not set
+func getEnvWithDefault(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	return value
+}
+
+// LoadFromEnv loads configuration from environment variables
+func LoadFromEnv() *Config {
+	config := &Config{
+		Providers: ProvidersConfig{
+			GitHub: GitHubConfig{
+				Token: os.Getenv(GitHubTokenEnvVar),
+			},
+		},
+		Global: GlobalConfig{
+			OutputFormat: getEnvWithDefault("CI_CLI_OUTPUT_FORMAT", "table"),
+		},
+	}
+
+	return config
 }
 
 // Load loads configuration from a file

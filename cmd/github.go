@@ -1,6 +1,12 @@
 package cmd
 
 import (
+	"ci-cli/internal/config"
+	"ci-cli/internal/providers/github"
+	"context"
+	"fmt"
+	"time"
+
 	"github.com/spf13/cobra"
 )
 
@@ -13,10 +19,53 @@ var githubCmd = &cobra.Command{
 var githubLoginCmd = &cobra.Command{
 	Use:   "login",
 	Short: "Login to GitHub",
-	Long:  `Login to GitHub using the GitHub CLI.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Println("GitHub login command - not implemented yet")
+	Long:  `Login to GitHub using a personal access token. The token can be provided via environment variable GITHUB_TOKEN or interactively.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return gitHubLogin(cmd)
 	},
+}
+
+func gitHubLogin(cmd *cobra.Command) error {
+	// Load configuration
+	config := config.LoadFromEnv()
+
+	// Check if token is already set
+	if config.Providers.GitHub.Token != "" {
+		cmd.Println("GitHub token found in environment variables")
+
+		// Validate the token
+		client := github.NewClient(config.Providers.GitHub.Token)
+		if client == nil {
+			return fmt.Errorf("failed to create GitHub client")
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if err := client.ValidateToken(ctx); err != nil {
+			return fmt.Errorf("invalid GitHub token: %w", err)
+		}
+
+		user, err := client.GetAuthenticatedUser(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get user information: %w", err)
+		}
+
+		cmd.Printf("✅ Successfully authenticated as: %s\n", *user.Login)
+		return nil
+	}
+
+	// Interactive token input
+	cmd.Println("GitHub token not found in environment variables")
+	cmd.Println("Please provide your GitHub Personal Access Token:")
+	cmd.Println("1. Go to https://github.com/settings/tokens")
+	cmd.Println("2. Generate a new token with appropriate permissions")
+	cmd.Println("3. Enter the token below:")
+
+	// For security, you might want to use a library like github.com/AlecAivazis/survey/v2
+	// for password-style input, but for now we'll use a simple prompt
+
+	return fmt.Errorf("interactive token input not implemented yet. Please set GITHUB_TOKEN environment variable")
 }
 
 var githubListCmd = &cobra.Command{
