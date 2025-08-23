@@ -27,14 +27,14 @@ var githubLoginCmd = &cobra.Command{
 
 func gitHubLogin(cmd *cobra.Command) error {
 	// Load configuration
-	config := config.LoadFromEnv()
+	cfg := config.Load()
 
 	// Check if token is already set
-	if config.Providers.GitHub.Token != "" {
-		cmd.Println("GitHub token found in environment variables")
+	if cfg.Providers.GitHub.Token != "" {
+		cmd.Println("GitHub token found in configuration")
 
 		// Validate the token
-		client := github.NewClient(config.Providers.GitHub.Token)
+		client := github.NewClient(cfg.Providers.GitHub.Token)
 		if client == nil {
 			return fmt.Errorf("failed to create GitHub client")
 		}
@@ -56,16 +56,15 @@ func gitHubLogin(cmd *cobra.Command) error {
 	}
 
 	// Interactive token input
-	cmd.Println("GitHub token not found in environment variables")
+	cmd.Println("GitHub token not found in configuration")
 	cmd.Println("Please provide your GitHub Personal Access Token:")
 	cmd.Println("1. Go to https://github.com/settings/tokens")
 	cmd.Println("2. Generate a new token with appropriate permissions")
-	cmd.Println("3. Enter the token below:")
+	cmd.Println("3. Set it in one of the following ways:")
+	cmd.Println("   - Environment variable: GITHUB_TOKEN")
+	cmd.Println("   - .env file: GITHUB_TOKEN=your_token")
 
-	// For security, you might want to use a library like github.com/AlecAivazis/survey/v2
-	// for password-style input, but for now we'll use a simple prompt
-
-	return fmt.Errorf("interactive token input not implemented yet. Please set GITHUB_TOKEN environment variable")
+	return fmt.Errorf("interactive token input not implemented yet. Please set GITHUB_TOKEN in environment or .env file")
 }
 
 var githubListCmd = &cobra.Command{

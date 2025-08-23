@@ -3,113 +3,73 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
-	"gopkg.in/yaml.v3"
+	"github.com/spf13/viper"
 )
 
 // Config represents the main configuration structure
 type Config struct {
-	Providers ProvidersConfig `yaml:"providers"`
-	Global    GlobalConfig    `yaml:"global"`
+	Providers ProvidersConfig
+	Global    GlobalConfig
 }
 
 // ProvidersConfig contains configuration for different CI providers
 type ProvidersConfig struct {
-	GitLab    GitLabConfig    `yaml:"gitlab"`
-	GitHub    GitHubConfig    `yaml:"github"`
-	CircleCI  CircleCIConfig  `yaml:"circleci"`
-	Bitbucket BitbucketConfig `yaml:"bitbucket"`
+	GitLab    GitLabConfig
+	GitHub    GitHubConfig
+	CircleCI  CircleCIConfig
+	Bitbucket BitbucketConfig
 }
 
 // GlobalConfig contains global configuration options
 type GlobalConfig struct {
-	DefaultProvider string `yaml:"default_provider"`
-	OutputFormat    string `yaml:"output_format"`
+	DefaultProvider string
+	OutputFormat    string
 }
 
-// getEnvWithDefault returns the value of the environment variable with the given key, or the default value if the environment variable is not set
-func getEnvWithDefault(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
-	}
-	return value
-}
+// LoadEnvFile loads .env file from current directory
+func LoadEnvFile() {
+	envViper := viper.New()
+	envViper.SetConfigName(".env")
+	envViper.SetConfigType("env")
+	envViper.AddConfigPath(".")
 
-// LoadFromEnv loads configuration from envirment variables
-func LoadFromEnv() *Config {
-	config := &Config{
-		Providers: ProvidersConfig{
-			GitHub:    LoadGitHubFromEnv(),
-			GitLab:    LoadGitLabFromEnv(),
-			CircleCI:  LoadCircleCIFromEnv(),
-			Bitbucket: LoadBitbucketFromEnv(),
-		},
-		Global: GlobalConfig{
-			OutputFormat: getEnvWithDefault("CI_CLI_OUTPUT_FORMAT", "table"),
-		},
-	}
-
-	return config
-}
-
-func LoadConfig(configPath string) (*Config, error) {
-	config := LoadFromEnv()
-
-	// If config file exists, merge with environment variables
-	if configPath != "" {
-		fileConfig, err := Load(configPath)
-		if err != nil {
-			// Log warning but don't fail if file doesn't exist
-			fmt.Printf("Warning: Could not load config file: %v\n", err)
-		} else {
-			// Merge configurations (env vars take precedence)
-			config = mergeConfigs(fileConfig, config)
+	if err := envViper.ReadInConfig(); err == nil {
+		fmt.Printf("Loaded .env file\n")
+		// Set environment variables from .env file with correct case
+		for _, key := range envViper.AllKeys() {
+			if value := envViper.GetString(key); value != "" {
+				// Convert to uppercase for environment variables
+				envKey := strings.ToUpper(key)
+				os.Setenv(envKey, value)
+			}
 		}
 	}
-
-	return config, nil
 }
 
-func mergeConfigs(fileConfig, envConfig *Config) *Config {
-	// Merge all provider configurations (env vars take precedence)
-	envConfig.Providers.GitHub = MergeGitHubConfig(fileConfig.Providers.GitHub, envConfig.Providers.GitHub)
-	envConfig.Providers.GitLab = MergeGitLabConfig(fileConfig.Providers.GitLab, envConfig.Providers.GitLab)
-	envConfig.Providers.CircleCI = MergeCircleCIConfig(fileConfig.Providers.CircleCI, envConfig.Providers.CircleCI)
-	envConfig.Providers.Bitbucket = MergeBitbucketConfig(fileConfig.Providers.Bitbucket, envConfig.Providers.Bitbucket)
+// Load loads configuration from environment variables and .env file
+func Load() *Config {
+	// Load .env file from current directory
+	LoadEnvFile()
 
-	return envConfig
+	return &Config{
+		Providers: ProvidersConfig{
+			GitHub:    GitHubConfig{Token: os.Getenv("GITHUB_TOKEN"), URL: os.Getenv("GITHUB_URL")},
+			GitLab:    GitLabConfig{Token: os.Getenv("GITLAB_TOKEN"), URL: os.Getenv("GITLAB_URL")},
+			CircleCI:  CircleCIConfig{Token: os.Getenv("CIRCLECI_TOKEN")},
+			Bitbucket: BitbucketConfig{Token: os.Getenv("BITBUCKET_TOKEN"), URL: os.Getenv("BITBUCKET_URL")},
+		},
+		Global: GlobalConfig{
+			OutputFormat: getEnvOrDefault("CI_CLI_OUTPUT_FORMAT", "table"),
+		},
+	}
 }
 
-// Load loads configuration from a file
-func Load(configPath string) (*Config, error) {
-	if configPath == "" {
-		return nil, fmt.Errorf("config path is required")
+// getEnvOrDefault returns environment variable value or default
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
 	}
-
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
-	}
-
-	var config Config
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse config file: %w", err)
-	}
-
-	return &config, nil
-}
-
-// Save saves configuration to a file
-func (c *Config) Save(configPath string) error {
-	data, err := yaml.Marshal(c)
-	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
-	}
-
-	if err := os.WriteFile(configPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write config file: %w", err)
-	}
-
-	return nil
+	return defaultValue
 }
